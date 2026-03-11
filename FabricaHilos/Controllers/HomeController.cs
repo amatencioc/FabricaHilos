@@ -25,9 +25,10 @@ namespace FabricaHilos.Controllers
             var ordenesActivas = await _context.OrdenesProduccion
                 .Where(o => o.Estado == Models.Produccion.EstadoOrden.EnProceso || o.Estado == Models.Produccion.EstadoOrden.Pendiente)
                 .CountAsync();
-            var ventasMes = await _context.Pedidos
+            var ventasMes = (decimal)(await _context.Pedidos
                 .Where(p => p.Fecha.Month == DateTime.Now.Month && p.Fecha.Year == DateTime.Now.Year)
-                .SumAsync(p => (decimal?)p.Total) ?? 0;
+                .Select(p => (double)p.Total)
+                .SumAsync());
             var totalEmpleados = await _context.Empleados.Where(e => e.Activo).CountAsync();
             var stockBajo = await _context.MateriasPrimas.Where(m => m.CantidadDisponible < m.StockMinimo).CountAsync();
 
