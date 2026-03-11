@@ -78,7 +78,7 @@ public class ClienteRepository : IClienteRepository
 
         await cmd.ExecuteNonQueryAsync();
 
-        return Convert.ToInt32(newIdParam.Value.ToString());
+        return Convert.ToInt32(newIdParam.Value);
     }
 
     public async Task<bool> ActualizarAsync(Cliente cliente)

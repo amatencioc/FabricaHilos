@@ -87,7 +87,7 @@ public class PedidoRepository : IPedidoRepository
 
         await cmd.ExecuteNonQueryAsync();
 
-        return Convert.ToInt32(newIdParam.Value.ToString());
+        return Convert.ToInt32(newIdParam.Value);
     }
 
     public async Task<bool> ActualizarAsync(Pedido pedido)
