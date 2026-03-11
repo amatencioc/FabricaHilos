@@ -1,0 +1,62 @@
+@model IEnumerable<FabricaHilos.Models.Material>
+
+@{
+    ViewData["Title"] = "Materiales";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🧪 Materiales</h2>
+    <a asp-action="Create" class="btn btn-success">+ Nuevo Material</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-success">
+            <tr>
+                <th>@Html.DisplayNameFor(m => m.First().Nombre)</th>
+                <th>@Html.DisplayNameFor(m => m.First().UnidadMedida)</th>
+                <th>@Html.DisplayNameFor(m => m.First().Stock)</th>
+                <th>@Html.DisplayNameFor(m => m.First().CostoUnitario)</th>
+                <th>@Html.DisplayNameFor(m => m.First().Activo)</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var material in Model)
+            {
+                <tr>
+                    <td>@material.Nombre</td>
+                    <td>@material.UnidadMedida</td>
+                    <td>
+                        <span class="badge @(material.Stock < 10 ? "bg-danger" : "bg-success")">
+                            @material.Stock @material.UnidadMedida
+                        </span>
+                    </td>
+                    <td>@material.CostoUnitario.ToString("C")</td>
+                    <td>
+                        @if (material.Activo)
+                        {
+                            <span class="badge bg-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactivo</span>
+                        }
+                    </td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@material.Id" class="btn btn-sm btn-outline-info">Ver</a>
+                        <a asp-action="Edit" asp-route-id="@material.Id" class="btn btn-sm btn-outline-warning">Editar</a>
+                        <a asp-action="Delete" asp-route-id="@material.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info text-center">
+        No hay materiales registrados. <a asp-action="Create">Crear el primero</a>.
+    </div>
+}

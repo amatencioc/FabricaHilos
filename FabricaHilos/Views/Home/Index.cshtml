@@ -1,0 +1,51 @@
+﻿@{
+    ViewData["Title"] = "Inicio";
+}
+
+<div class="text-center mb-5">
+    <h1 class="display-4 fw-bold text-primary">🧵 Fábrica de Hilos</h1>
+    <p class="lead text-muted">Sistema de Gestión de Producción y Ventas</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-md-3">
+        <div class="card border-primary shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="display-1 mb-3">🎯</div>
+                <h5 class="card-title fw-bold text-primary">Hilos</h5>
+                <p class="card-text text-muted">Gestión del catálogo de hilos y su inventario.</p>
+                <a asp-controller="Hilos" asp-action="Index" class="btn btn-primary">Ver Hilos</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="display-1 mb-3">🧪</div>
+                <h5 class="card-title fw-bold text-success">Materiales</h5>
+                <p class="card-text text-muted">Control de materias primas y su stock.</p>
+                <a asp-controller="Materiales" asp-action="Index" class="btn btn-success">Ver Materiales</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="display-1 mb-3">👥</div>
+                <h5 class="card-title fw-bold text-info">Clientes</h5>
+                <p class="card-text text-muted">Registro y administración de clientes.</p>
+                <a asp-controller="Clientes" asp-action="Index" class="btn btn-info text-white">Ver Clientes</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="display-1 mb-3">📋</div>
+                <h5 class="card-title fw-bold text-warning">Pedidos</h5>
+                <p class="card-text text-muted">Seguimiento de pedidos y sus estados.</p>
+                <a asp-controller="Pedidos" asp-action="Index" class="btn btn-warning">Ver Pedidos</a>
+            </div>
+        </div>
+    </div>
+</div>

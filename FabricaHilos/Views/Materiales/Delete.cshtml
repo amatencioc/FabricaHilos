@@ -1,0 +1,42 @@
+@model FabricaHilos.Models.Material
+
+@{
+    ViewData["Title"] = "Eliminar Material";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🧪 Eliminar Material</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary">← Volver</a>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-danger shadow-sm">
+            <div class="card-header bg-danger text-white">
+                ⚠️ ¿Está seguro que desea eliminar este material?
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.Nombre)</dt>
+                    <dd class="col-sm-8">@Model.Nombre</dd>
+                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.UnidadMedida)</dt>
+                    <dd class="col-sm-8">@Model.UnidadMedida</dd>
+                    <dt class="col-sm-4">@Html.DisplayNameFor(m => m.Stock)</dt>
+                    <dd class="col-sm-8">@Model.Stock @Model.UnidadMedida</dd>
+                </dl>
+
+                <div class="alert alert-warning">
+                    Esta acción no se puede deshacer.
+                </div>
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                        <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
