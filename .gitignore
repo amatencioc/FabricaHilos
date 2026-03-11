@@ -1,0 +1,31 @@
+## .NET build artifacts
+**/bin/
+**/obj/
+**/out/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+
+## Rider
+.idea/
+
+## NuGet
+*.nupkg
+packages/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+## Publish
+**/publish/
+
+## Log files
+*.log
+
+## User-specific
+*.rsuser

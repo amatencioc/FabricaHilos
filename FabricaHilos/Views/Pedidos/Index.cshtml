@@ -1,0 +1,63 @@
+@model IEnumerable<FabricaHilos.Models.Pedido>
+
+@{
+    ViewData["Title"] = "Pedidos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>📋 Pedidos</h2>
+    <a asp-action="Create" class="btn btn-warning">+ Nuevo Pedido</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-warning">
+            <tr>
+                <th>@Html.DisplayNameFor(m => m.First().Numero)</th>
+                <th>Cliente</th>
+                <th>@Html.DisplayNameFor(m => m.First().FechaPedido)</th>
+                <th>@Html.DisplayNameFor(m => m.First().FechaEntrega)</th>
+                <th>@Html.DisplayNameFor(m => m.First().Estado)</th>
+                <th>@Html.DisplayNameFor(m => m.First().Total)</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var pedido in Model)
+            {
+                <tr>
+                    <td><span class="badge bg-secondary">@pedido.Numero</span></td>
+                    <td>@pedido.Cliente?.NombreCompleto</td>
+                    <td>@pedido.FechaPedido.ToString("dd/MM/yyyy")</td>
+                    <td>@(pedido.FechaEntrega.HasValue ? pedido.FechaEntrega.Value.ToString("dd/MM/yyyy") : "—")</td>
+                    <td>
+                        @{
+                            var badgeClass = pedido.Estado switch
+                            {
+                                "Pendiente" => "bg-secondary",
+                                "En Proceso" => "bg-primary",
+                                "Completado" => "bg-success",
+                                "Cancelado" => "bg-danger",
+                                _ => "bg-secondary"
+                            };
+                        }
+                        <span class="badge @badgeClass">@pedido.Estado</span>
+                    </td>
+                    <td>@pedido.Total.ToString("C")</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@pedido.Id" class="btn btn-sm btn-outline-info">Ver</a>
+                        <a asp-action="Edit" asp-route-id="@pedido.Id" class="btn btn-sm btn-outline-warning">Editar</a>
+                        <a asp-action="Delete" asp-route-id="@pedido.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info text-center">
+        No hay pedidos registrados. <a asp-action="Create">Crear el primero</a>.
+    </div>
+}
