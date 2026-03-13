@@ -65,6 +65,13 @@ namespace FabricaHilos.Services.Produccion
         public string PasoManual { get; set; } = string.Empty;
     }
 
+    public class GuardarCerrarResultado
+    {
+        public bool UpdateExitoso { get; set; }
+        public string Codigo { get; set; } = "0";
+        public string Mensaje { get; set; } = string.Empty;
+    }
+
     public interface IRecetaService
     {
         Task<RecetaDto?> BuscarRecetaPorCodigoAsync(string codigo);
@@ -82,6 +89,9 @@ namespace FabricaHilos.Services.Produccion
             string? oldReceta, string? oldLote, string? oldTpMaq, string? oldCodMaq, string? oldTitulo, DateTime fechaIni,
             string? newReceta, string? newLote, string? newTpMaq, string? newCodMaq, string? newTitulo,
             string? cCodigo, string? turno, string? pasoManuar);
+        Task<GuardarCerrarResultado> GuardarYCerrarDetalleProduccionAsync(
+            string? receta, string? lote, string? tpMaq, string? codMaq, string? titulo, DateTime fechaIni,
+            decimal? velocidad, decimal? metraje, int? rolloTacho, decimal? kgNeto);
     }
 
     public class RecetaService : IRecetaService
@@ -956,6 +966,100 @@ namespace FabricaHilos.Services.Produccion
             {
                 _logger.LogError(ex, "Error general al actualizar preparatoria en Oracle");
                 return false;
+            }
+        }
+
+        public async Task<GuardarCerrarResultado> GuardarYCerrarDetalleProduccionAsync(
+            string? receta, string? lote, string? tpMaq, string? codMaq, string? titulo, DateTime fechaIni,
+            decimal? velocidad, decimal? metraje, int? rolloTacho, decimal? kgNeto)
+        {
+            var connectionString = _configuration.GetConnectionString("OracleConnection");
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                _logger.LogWarning("Oracle connection string not configured");
+                return new GuardarCerrarResultado { UpdateExitoso = false };
+            }
+
+            const string query = @"
+                UPDATE H_RPRODUC
+                SET VELOCIDAD = :velocidad,
+                    METRAJE   = :metraje,
+                    UNIDADES  = :unidades,
+                    PESO_NETO = :kgPeso,
+                    ESTADO    = '3',
+                    FECHA_FIN = :fechaFin
+                WHERE NVL(TO_CHAR(RECETA), ' ')                    = NVL(:receta, ' ')
+                  AND LOTE                                          = :lote
+                  AND TP_MAQ                                        = :tpMaq
+                  AND COD_MAQ                                       = :codMaq
+                  AND TITULO                                        = :titulo
+                  AND TO_CHAR(FECHA_INI, 'YYYY-MM-DD HH24:MI:SS') = :fechaIni
+                  AND ESTADO = '1'";
+
+            try
+            {
+                using var connection = new OracleConnection(connectionString);
+                await connection.OpenAsync();
+
+                using var command = new OracleCommand(query, connection);
+
+                static object Str(string? v) => string.IsNullOrEmpty(v) ? DBNull.Value : (object)v;
+                static object Dec(decimal? v) => v.HasValue ? (object)v.Value : DBNull.Value;
+                static object Int(int? v) => v.HasValue ? (object)v.Value : DBNull.Value;
+
+                command.Parameters.Add(new OracleParameter(":velocidad", OracleDbType.Decimal)    { Value = Dec(velocidad) });
+                command.Parameters.Add(new OracleParameter(":metraje",   OracleDbType.Decimal)    { Value = Dec(metraje) });
+                command.Parameters.Add(new OracleParameter(":unidades",  OracleDbType.Int32)      { Value = Int(rolloTacho) });
+                command.Parameters.Add(new OracleParameter(":kgPeso",    OracleDbType.Decimal)    { Value = Dec(kgNeto) });
+                command.Parameters.Add(new OracleParameter(":fechaFin",  OracleDbType.Date)       { Value = DateTime.Now });
+                command.Parameters.Add(new OracleParameter(":receta",    OracleDbType.Varchar2)   { Value = Str(receta) });
+                command.Parameters.Add(new OracleParameter(":lote",      OracleDbType.Varchar2)   { Value = Str(lote) });
+                command.Parameters.Add(new OracleParameter(":tpMaq",     OracleDbType.Varchar2)   { Value = Str(tpMaq) });
+                command.Parameters.Add(new OracleParameter(":codMaq",    OracleDbType.Varchar2)   { Value = Str(codMaq) });
+                command.Parameters.Add(new OracleParameter(":titulo",    OracleDbType.Varchar2)   { Value = Str(titulo) });
+                command.Parameters.Add(new OracleParameter(":fechaIni",  OracleDbType.Varchar2)   { Value = fechaIni.ToString("yyyy-MM-dd HH:mm:ss") });
+
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                _logger.LogInformation("GuardarYCerrar: filas afectadas en H_RPRODUC = {Rows}", rowsAffected);
+
+                if (rowsAffected <= 0)
+                    return new GuardarCerrarResultado { UpdateExitoso = false };
+
+                // Ejecutar SP_CALCULAR_PROD_ESP_TEO tras el UPDATE exitoso
+                using var procCommand = new OracleCommand("SIG.PKG_PROD_RUTINAS.SP_CALCULAR_PROD_ESP_TEO", connection);
+                procCommand.CommandType = CommandType.StoredProcedure;
+                procCommand.BindByName  = true;
+
+                procCommand.Parameters.Add(new OracleParameter("pi_receta",    OracleDbType.Varchar2, 200) { Direction = ParameterDirection.Input,  Value = Str(receta) });
+                procCommand.Parameters.Add(new OracleParameter("pi_lote",      OracleDbType.Varchar2, 200) { Direction = ParameterDirection.Input,  Value = Str(lote) });
+                procCommand.Parameters.Add(new OracleParameter("pi_tp_maq",    OracleDbType.Varchar2, 10)  { Direction = ParameterDirection.Input,  Value = Str(tpMaq) });
+                procCommand.Parameters.Add(new OracleParameter("pi_cod_maq",   OracleDbType.Varchar2, 20)  { Direction = ParameterDirection.Input,  Value = Str(codMaq) });
+                procCommand.Parameters.Add(new OracleParameter("pi_titulo",    OracleDbType.Varchar2, 20)  { Direction = ParameterDirection.Input,  Value = Str(titulo) });
+                procCommand.Parameters.Add(new OracleParameter("pi_fecha_ini", OracleDbType.Varchar2, 30)  { Direction = ParameterDirection.Input,  Value = fechaIni.ToString("yyyy-MM-dd HH:mm:ss") });
+                var poResultado = new OracleParameter("po_resultado", OracleDbType.Varchar2, 4000) { Direction = ParameterDirection.Output };
+                procCommand.Parameters.Add(poResultado);
+
+                await procCommand.ExecuteNonQueryAsync();
+
+                var resultadoStr = poResultado.Value?.ToString() ?? "0|";
+                var sepIdx  = resultadoStr.IndexOf('|');
+                var codigo  = sepIdx > 0  ? resultadoStr[..sepIdx]       : "0";
+                var mensaje = sepIdx >= 0 ? resultadoStr[(sepIdx + 1)..] : string.Empty;
+
+                _logger.LogInformation("SP_CALCULAR_PROD_ESP_TEO resultado: Codigo={Codigo}, Mensaje={Mensaje}", codigo, mensaje);
+
+                return new GuardarCerrarResultado { UpdateExitoso = true, Codigo = codigo, Mensaje = mensaje };
+            }
+            catch (OracleException oEx)
+            {
+                _logger.LogError(oEx, "Error de Oracle en GuardarYCerrarDetalleProduccion. OracleError: {OracleError}", oEx.Message);
+                return new GuardarCerrarResultado { UpdateExitoso = false };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error general en GuardarYCerrarDetalleProduccion");
+                return new GuardarCerrarResultado { UpdateExitoso = false };
             }
         }
     }

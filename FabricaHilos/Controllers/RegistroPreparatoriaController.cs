@@ -417,15 +417,40 @@ namespace FabricaHilos.Controllers
                 return View(orden);
             }
 
-            // Actualizar solo los campos de detalle de producción
+            // Actualizar campos de detalle y cerrar localmente
             orden.Velocidad = velocidad;
-            orden.Metraje = metraje;
+            orden.Metraje   = metraje;
             orden.RolloTacho = rolloTacho;
-            orden.KgNeto = kgNeto;
+            orden.KgNeto    = kgNeto;
+            orden.Cerrado   = true;
+            orden.Estado    = EstadoOrden.Completada;
 
             _context.OrdenesProduccion.Update(orden);
             await _context.SaveChangesAsync();
-            TempData["Success"] = "Detalle de producción actualizado exitosamente.";
+
+            // UPDATE Oracle + SP_CALCULAR_PROD_ESP_TEO
+            var resultado = await _recetaService.GuardarYCerrarDetalleProduccionAsync(
+                orden.CodigoReceta, orden.Lote,
+                orden.CodigoMaquina, orden.Maquina,
+                orden.Titulo, orden.FechaInicio,
+                velocidad, metraje, rolloTacho, kgNeto);
+
+            if (!resultado.UpdateExitoso)
+            {
+                TempData["Warning"] = "Detalle guardado localmente, pero no se pudo actualizar en Oracle.";
+                _logger.LogWarning("DetalleProduccion {Id}: guardado en SQLite pero falló en Oracle.", id);
+            }
+            else if (resultado.Codigo == "0")
+            {
+                TempData["Success"] = "Detalle de producción guardado y preparatoria cerrada exitosamente.";
+                _logger.LogInformation("DetalleProduccion {Id}: guardado y cerrado en Oracle y SQLite.", id);
+            }
+            else
+            {
+                TempData["Warning"] = resultado.Mensaje;
+                _logger.LogWarning("DetalleProduccion {Id}: SP retornó código {Codigo}: {Mensaje}.", id, resultado.Codigo, resultado.Mensaje);
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

@@ -50,7 +50,7 @@
                         <th>Material</th>
                         <th>Máquina</th>
                         <th>Título</th>
-                        <th>Fecha Ini</th>
+                        <th>Fecha Inicial</th>
                         <th>Turno</th>
                         <th>Operario</th>
                         <th>Paso</th>
@@ -73,7 +73,7 @@
                                 <td>@(item.Material ?? "-")</td>
                                 <td>@(string.IsNullOrEmpty(item.DescripcionMaquina) ? "-" : item.DescripcionMaquina)</td>
                                 <td>@(string.IsNullOrEmpty(item.DescripcionTitulo) ? "-" : item.DescripcionTitulo)</td>
-                                <td>@item.FechaInicio.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.FechaInicio.ToString("dd/MM/yyyy HH:mm:ss")</td>
                                 <td>@(item.Turno == null ? "-" : ProduccionLookups.GetTurno(item.Turno))</td>
                                 <td>@(string.IsNullOrEmpty(item.NombreOperario) ? "-" : item.NombreOperario)</td>
                                 <td>@(item.PasoManual == null ? "-" : ProduccionLookups.GetPaso(item.PasoManual))</td>

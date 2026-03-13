@@ -25,23 +25,51 @@
                     <input asp-for="Id" type="hidden" />
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+                    <!-- Información de la Preparatoria -->
+                    <div class="row mb-4 pb-3 border-bottom">
+                        <div class="col-md-3">
+                            <strong>Receta:</strong> @(Model.CodigoReceta ?? "-")
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Lote:</strong> @(Model.Lote ?? "-")
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Material:</strong> @Model.DescripcionMaterial
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Fecha Inicial:</strong> @Model.FechaInicio.ToString("dd/MM/yyyy HH:mm:ss")
+                        </div>
+                    </div>
+
                     <div class="row g-3">
                         <!-- Fila 1: Receta y Lote -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Receta <span class="text-muted small">(opcional)</span></label>
-                            <input asp-for="CodigoReceta" class="form-control" placeholder="RECETA" />
+                            <div class="input-group">
+                                <input asp-for="CodigoReceta" id="recetaInput" class="form-control" placeholder="Ingrese el código de receta" autocomplete="off" />
+                                <button type="button" id="btnBuscarReceta" class="btn btn-outline-secondary" title="Buscar receta">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
                             <span asp-validation-for="CodigoReceta" class="text-danger small"></span>
+                            <small id="recetaStatus" class="text-muted"></small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Lote <span class="text-danger">*</span></label>
-                            <input asp-for="Lote" class="form-control" placeholder="LOTE" />
+                            <div class="input-group">
+                                <input asp-for="Lote" id="loteInput" class="form-control" placeholder="Ingrese código de lote" autocomplete="off" />
+                                <button type="button" id="btnBuscarLote" class="btn btn-outline-secondary" title="Buscar lote">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
                             <span asp-validation-for="Lote" class="text-danger small"></span>
+                            <small id="loteStatus" class="text-muted"></small>
                         </div>
 
                         <!-- Fila 2: Material -->
                         <div class="col-md-12">
                             <label class="form-label fw-semibold">Material <span class="text-danger">*</span></label>
-                            <input asp-for="DescripcionMaterial" class="form-control" placeholder="DESC_MATERIAL" />
+                            <input asp-for="DescripcionMaterial" id="materialInput" class="form-control" placeholder="Se completará al buscar receta o lote" readonly style="background-color: #f8f9fa;" />
                             <span asp-validation-for="DescripcionMaterial" class="text-danger small"></span>
                         </div>
 
@@ -152,6 +180,108 @@
             return `${año}-${mes}-${dia}T${horas}:${minutos}:${segundos}`;
         }
 
+        // === Función para buscar receta ===
+        async function buscarReceta() {
+            const recetaInput = document.getElementById('recetaInput');
+            const loteInput = document.getElementById('loteInput');
+            const materialInput = document.getElementById('materialInput');
+            const statusElement = document.getElementById('recetaStatus');
+            const btnBuscar = document.getElementById('btnBuscarReceta');
+            const codigo = recetaInput.value.trim();
+
+            if (!codigo) {
+                statusElement.textContent = 'Ingrese un código';
+                statusElement.className = 'text-danger small';
+                return;
+            }
+
+            btnBuscar.disabled = true;
+            btnBuscar.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            statusElement.textContent = 'Buscando...';
+            statusElement.className = 'text-info small';
+
+            try {
+                const response = await fetch(`@Url.Action("BuscarReceta", "RegistroPreparatoria")?codigo=${encodeURIComponent(codigo)}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    recetaInput.value = result.data.numero;
+                    loteInput.value = result.data.lote;
+                    materialInput.value = result.data.material;
+                    statusElement.textContent = '\u2713 Receta encontrada';
+                    statusElement.className = 'text-success small';
+                    document.getElementById('loteStatus').textContent = '';
+                    loteInput.style.backgroundColor = '#d4edda';
+                    materialInput.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        loteInput.style.backgroundColor = '#f8f9fa';
+                        materialInput.style.backgroundColor = '#f8f9fa';
+                    }, 2000);
+                } else {
+                    statusElement.textContent = '\u2717 ' + (result.message || 'No se encontró la receta');
+                    statusElement.className = 'text-warning small';
+                    loteInput.value = '';
+                    materialInput.value = '';
+                }
+            } catch (error) {
+                console.error('Error al buscar receta:', error);
+                statusElement.textContent = '\u2717 Error al buscar la receta';
+                statusElement.className = 'text-danger small';
+            } finally {
+                btnBuscar.disabled = false;
+                btnBuscar.innerHTML = '<i class="bi bi-search"></i>';
+            }
+        }
+
+        // === Función para buscar lote ===
+        async function buscarLote() {
+            const loteInput = document.getElementById('loteInput');
+            const recetaInput = document.getElementById('recetaInput');
+            const materialInput = document.getElementById('materialInput');
+            const statusElement = document.getElementById('loteStatus');
+            const btnBuscar = document.getElementById('btnBuscarLote');
+            const codigo = loteInput.value.trim();
+
+            if (!codigo) {
+                statusElement.textContent = 'Ingrese un código';
+                statusElement.className = 'text-danger small';
+                return;
+            }
+
+            btnBuscar.disabled = true;
+            btnBuscar.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            statusElement.textContent = 'Buscando...';
+            statusElement.className = 'text-info small';
+
+            try {
+                const response = await fetch(`@Url.Action("BuscarLote", "RegistroPreparatoria")?codigo=${encodeURIComponent(codigo)}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    loteInput.value = result.data.lote;
+                    recetaInput.value = '';
+                    materialInput.value = result.data.material;
+                    statusElement.textContent = '\u2713 Lote encontrado';
+                    statusElement.className = 'text-success small';
+                    document.getElementById('recetaStatus').textContent = '';
+                    materialInput.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        materialInput.style.backgroundColor = '#f8f9fa';
+                    }, 2000);
+                } else {
+                    statusElement.textContent = '\u2717 ' + (result.message || 'No se encontró el lote');
+                    statusElement.className = 'text-warning small';
+                }
+            } catch (error) {
+                console.error('Error al buscar lote:', error);
+                statusElement.textContent = '\u2717 Error al buscar el lote';
+                statusElement.className = 'text-danger small';
+            } finally {
+                btnBuscar.disabled = false;
+                btnBuscar.innerHTML = '<i class="bi bi-search"></i>';
+            }
+        }
+
         // Establecer fecha inicial al cargar la página (con la fecha actual del registro)
         document.addEventListener('DOMContentLoaded', function() {
             const campoFecha = document.getElementById('fechaInicio');
@@ -207,6 +337,28 @@
             // Configurar evento change
             codigoMaquinaSelect.addEventListener('change', function() {
                 cargarMaquinas(this.value);
+            });
+
+            // === Configurar búsqueda de receta ===
+            const recetaInput = document.getElementById('recetaInput');
+            const btnBuscarReceta = document.getElementById('btnBuscarReceta');
+            btnBuscarReceta.addEventListener('click', buscarReceta);
+            recetaInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); buscarReceta(); }
+            });
+            recetaInput.addEventListener('input', function() {
+                document.getElementById('recetaStatus').textContent = '';
+            });
+
+            // === Configurar búsqueda de lote ===
+            const loteInput = document.getElementById('loteInput');
+            const btnBuscarLote = document.getElementById('btnBuscarLote');
+            btnBuscarLote.addEventListener('click', buscarLote);
+            loteInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); buscarLote(); }
+            });
+            loteInput.addEventListener('input', function() {
+                document.getElementById('loteStatus').textContent = '';
             });
         });
     </script>
