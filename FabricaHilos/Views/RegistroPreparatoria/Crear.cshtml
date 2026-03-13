@@ -1,0 +1,395 @@
+@model FabricaHilos.Models.Produccion.OrdenProduccion
+@using FabricaHilos.Models.Produccion
+
+@{
+    ViewData["Title"] = "Nueva Preparatoria";
+}
+
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-controller="Produccion" asp-action="Index">Producción</a></li>
+    <li class="breadcrumb-item"><a asp-action="Index">Registro de Preparatoria</a></li>
+    <li class="breadcrumb-item active">Nueva Preparatoria</li>
+}
+
+<div class="d-flex align-items-center mb-4" style="border-bottom: 3px solid #ffc107; padding-bottom: 10px;">
+    <i class="bi bi-plus-circle fs-3 me-3"></i>
+    <h4 class="mb-0 fw-bold">Nueva Preparatoria</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-5">
+                <form asp-action="Crear" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row g-3">
+                        <!-- Fila 1: Receta y Lote -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Receta <span class="text-muted small">(opcional)</span></label>
+                            <div class="input-group">
+                                <input asp-for="CodigoReceta" id="recetaInput" class="form-control" placeholder="Ingrese el código de receta" autocomplete="off" />
+                                <button type="button" id="btnBuscarReceta" class="btn btn-outline-secondary" title="Buscar receta">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="CodigoReceta" class="text-danger small"></span>
+                            <small id="recetaStatus" class="text-muted"></small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Lote <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input asp-for="Lote" id="loteInput" class="form-control" placeholder="Ingrese código de lote" autocomplete="off" />
+                                <button type="button" id="btnBuscarLote" class="btn btn-outline-secondary" title="Buscar lote">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Lote" class="text-danger small"></span>
+                            <small id="loteStatus" class="text-muted"></small>
+                        </div>
+
+                        <!-- Fila 2: Material -->
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Material <span class="text-danger">*</span></label>
+                            <input asp-for="DescripcionMaterial" id="materialInput" class="form-control" placeholder="Se completará al buscar receta o lote" readonly style="background-color: #f8f9fa;" />
+                            <span asp-validation-for="DescripcionMaterial" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Fila 3: Tipo de Máquina y Máquina -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tipo de Máquina <span class="text-danger">*</span></label>
+                            <select asp-for="CodigoMaquina" id="codigoMaquinaSelect" class="form-select" disabled style="background-color: #f8f9fa;">
+                                <option value="">Seleccione tipo de máquina</option>
+                                @if (ViewBag.TiposMaquinas != null)
+                                {
+                                    @foreach (var maq in ViewBag.TiposMaquinas)
+                                    {
+                                        <option value="@maq.TipoMaquina">@maq.TextoCompleto</option>
+                                    }
+                                }
+                            </select>
+                            <input type="hidden" name="CodigoMaquina" value="M" />
+                            <span asp-validation-for="CodigoMaquina" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Máquina <span class="text-danger">*</span></label>
+                            <select asp-for="Maquina" id="maquinaSelect" class="form-select">
+                                <option value="">Seleccione una máquina</option>
+                            </select>
+                            <span asp-validation-for="Maquina" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Fila 4: Título y Operario -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Título <span class="text-danger">*</span></label>
+                            <select asp-for="Titulo" class="form-select">
+                                <option value="">Seleccione un título</option>
+                                @if (ViewBag.Titulos != null)
+                                {
+                                    @foreach (var titulo in ViewBag.Titulos)
+                                    {
+                                        <option value="@titulo.Titulo">@titulo.TextoCompleto</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="Titulo" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Operario <span class="text-danger">*</span></label>
+                            <select asp-for="EmpleadoId" class="form-select">
+                                <option value="">Seleccione un operario</option>
+                                @if (ViewBag.Empleados != null)
+                                {
+                                    @foreach (var emp in ViewBag.Empleados)
+                                    {
+                                        <option value="@emp.Codigo">@emp.TextoCompleto</option>
+                                    }
+                                }
+                            </select>
+                            <span asp-validation-for="EmpleadoId" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Fila 5: Turno y Paso Manual -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Turno <span class="text-danger">*</span></label>
+                            <select asp-for="Turno" class="form-select">
+                                <option value="">Seleccione un turno</option>
+                                <option value="1">1er Turno</option>
+                                <option value="2">2do Turno</option>
+                                <option value="3">3er Turno</option>
+                                <option value="4">12 Hrs Dia</option>
+                                <option value="5">12 Hrs Noche</option>
+                            </select>
+                            <span asp-validation-for="Turno" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Paso Manual <span class="text-danger">*</span></label>
+                            <select asp-for="PasoManuar" class="form-select">
+                                <option value="">Seleccione un paso</option>
+                                <option value="1">1ER</option>
+                                <option value="2">2DO</option>
+                                <option value="3">3ER</option>
+                                <option value="PRE">PRE</option>
+                                <option value="POST">POST</option>
+                            </select>
+                            <span asp-validation-for="PasoManuar" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Campos ocultos para valores por defecto -->
+                    <input type="hidden" asp-for="FechaInicio" id="fechaInicioHidden" />
+                    <input type="hidden" asp-for="Estado" value="@EstadoOrden.Pendiente" />
+                    <input type="hidden" asp-for="Cerrado" value="false" />
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save me-2"></i>Guardar
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary px-4">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // === Función para actualizar fecha en tiempo real ===
+        function formatearFechaHora() {
+            const ahora = new Date();
+            const año = ahora.getFullYear();
+            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+            const dia = String(ahora.getDate()).padStart(2, '0');
+            const horas = String(ahora.getHours()).padStart(2, '0');
+            const minutos = String(ahora.getMinutes()).padStart(2, '0');
+            const segundos = String(ahora.getSeconds()).padStart(2, '0');
+            return `${año}-${mes}-${dia}T${horas}:${minutos}:${segundos}`;
+        }
+
+        function actualizarFechaInicio() {
+            const campoFecha = document.getElementById('fechaInicioHidden');
+            if (campoFecha) {
+                campoFecha.value = formatearFechaHora();
+            }
+        }
+
+        // === Función para buscar receta ===
+        async function buscarReceta() {
+            const recetaInput = document.getElementById('recetaInput');
+            const loteInput = document.getElementById('loteInput');
+            const materialInput = document.getElementById('materialInput');
+            const statusElement = document.getElementById('recetaStatus');
+            const btnBuscar = document.getElementById('btnBuscarReceta');
+
+            const codigo = recetaInput.value.trim();
+
+            if (!codigo) {
+                statusElement.textContent = 'Ingrese un código';
+                statusElement.className = 'text-danger small';
+                return;
+            }
+
+            // Mostrar estado de carga
+            btnBuscar.disabled = true;
+            btnBuscar.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            statusElement.textContent = 'Buscando...';
+            statusElement.className = 'text-info small';
+
+            try {
+                const response = await fetch(`@Url.Action("BuscarReceta", "RegistroPreparatoria")?codigo=${encodeURIComponent(codigo)}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    // Autocompletar campos
+                    recetaInput.value = result.data.numero;
+                    loteInput.value = result.data.lote;
+                    materialInput.value = result.data.material;
+
+                    statusElement.textContent = '✓ Receta encontrada';
+                    statusElement.className = 'text-success small';
+
+                    // Limpiar mensaje de advertencia del campo Lote
+                    const loteStatusElement = document.getElementById('loteStatus');
+                    loteStatusElement.textContent = '';
+
+                    // Resaltar campos autocompletados brevemente
+                    loteInput.style.backgroundColor = '#d4edda';
+                    materialInput.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        loteInput.style.backgroundColor = '#f8f9fa';
+                        materialInput.style.backgroundColor = '#f8f9fa';
+                    }, 2000);
+                } else {
+                    statusElement.textContent = '✗ ' + (result.message || 'No se encontró la receta');
+                    statusElement.className = 'text-warning small';
+
+                    // Limpiar campos
+                    loteInput.value = '';
+                    materialInput.value = '';
+                }
+            } catch (error) {
+                console.error('Error al buscar receta:', error);
+                statusElement.textContent = '✗ Error al buscar la receta';
+                statusElement.className = 'text-danger small';
+            } finally {
+                btnBuscar.disabled = false;
+                btnBuscar.innerHTML = '<i class="bi bi-search"></i>';
+            }
+        }
+
+        // === Función para buscar lote ===
+        async function buscarLote() {
+            const loteInput = document.getElementById('loteInput');
+            const recetaInput = document.getElementById('recetaInput');
+            const materialInput = document.getElementById('materialInput');
+            const statusElement = document.getElementById('loteStatus');
+            const btnBuscar = document.getElementById('btnBuscarLote');
+
+            const codigo = loteInput.value.trim();
+
+            if (!codigo) {
+                statusElement.textContent = 'Ingrese un código';
+                statusElement.className = 'text-danger small';
+                return;
+            }
+
+            // Mostrar estado de carga
+            btnBuscar.disabled = true;
+            btnBuscar.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            statusElement.textContent = 'Buscando...';
+            statusElement.className = 'text-info small';
+
+            try {
+                const response = await fetch(`@Url.Action("BuscarLote", "RegistroPreparatoria")?codigo=${encodeURIComponent(codigo)}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    // Autocompletar campos
+                    loteInput.value = result.data.lote;
+
+                    // Limpiar el campo receta cuando se busca un lote
+                    recetaInput.value = '';
+
+                    materialInput.value = result.data.material;
+
+                    statusElement.textContent = '✓ Lote encontrado';
+                    statusElement.className = 'text-success small';
+
+                    // Limpiar mensaje de advertencia del campo Receta
+                    const recetaStatusElement = document.getElementById('recetaStatus');
+                    recetaStatusElement.textContent = '';
+
+                    // Resaltar campos autocompletados brevemente
+                    materialInput.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        materialInput.style.backgroundColor = '#f8f9fa';
+                    }, 2000);
+                } else {
+                    statusElement.textContent = '✗ ' + (result.message || 'No se encontró el lote');
+                    statusElement.className = 'text-warning small';
+
+                    // No limpiar campos, mantener el código ingresado
+                }
+            } catch (error) {
+                console.error('Error al buscar lote:', error);
+                statusElement.textContent = '✗ Error al buscar el lote';
+                statusElement.className = 'text-danger small';
+            } finally {
+                btnBuscar.disabled = false;
+                btnBuscar.innerHTML = '<i class="bi bi-search"></i>';
+            }
+        }
+
+        // === Inicialización ===
+        document.addEventListener('DOMContentLoaded', function() {
+            // Actualizar fecha en tiempo real
+            actualizarFechaInicio();
+            setInterval(actualizarFechaInicio, 1000);
+
+            // Configurar búsqueda de receta
+            const recetaInput = document.getElementById('recetaInput');
+            const btnBuscarReceta = document.getElementById('btnBuscarReceta');
+
+            // Buscar al hacer clic en el botón
+            btnBuscarReceta.addEventListener('click', buscarReceta);
+
+            // Buscar al presionar Enter en el campo de receta
+            recetaInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    buscarReceta();
+                }
+            });
+
+            // Limpiar estado cuando se modifica el campo
+            recetaInput.addEventListener('input', function() {
+                const statusElement = document.getElementById('recetaStatus');
+                statusElement.textContent = '';
+            });
+
+            // Configurar búsqueda de lote
+            const loteInput = document.getElementById('loteInput');
+            const btnBuscarLote = document.getElementById('btnBuscarLote');
+
+            // Buscar al hacer clic en el botón
+            btnBuscarLote.addEventListener('click', buscarLote);
+
+            // Buscar al presionar Enter en el campo de lote
+            loteInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    buscarLote();
+                }
+            });
+
+            // Limpiar estado cuando se modifica el campo
+            loteInput.addEventListener('input', function() {
+                const statusElement = document.getElementById('loteStatus');
+                statusElement.textContent = '';
+            });
+
+            // === Configurar carga dinámica de máquinas ===
+            const codigoMaquinaSelect = document.getElementById('codigoMaquinaSelect');
+            const maquinaSelect = document.getElementById('maquinaSelect');
+
+            codigoMaquinaSelect.addEventListener('change', async function() {
+                const tipoMaquina = this.value;
+
+                // Limpiar select de máquinas
+                maquinaSelect.innerHTML = '<option value="">Seleccione una máquina</option>';
+                maquinaSelect.disabled = true;
+
+                if (!tipoMaquina) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`@Url.Action("ObtenerMaquinasPorTipo", "RegistroPreparatoria")?tipoMaquina=${encodeURIComponent(tipoMaquina)}`);
+                    const result = await response.json();
+
+                    if (result.success && result.data && result.data.length > 0) {
+                        result.data.forEach(maquina => {
+                            const option = document.createElement('option');
+                            option.value = maquina.codigo;
+                            option.textContent = maquina.textoCompleto;
+                            maquinaSelect.appendChild(option);
+                        });
+                        maquinaSelect.disabled = false;
+                    } else {
+                        maquinaSelect.innerHTML = '<option value="">No hay máquinas disponibles</option>';
+                    }
+                } catch (error) {
+                    console.error('Error al cargar máquinas:', error);
+                    maquinaSelect.innerHTML = '<option value="">Error al cargar máquinas</option>';
+                }
+            });
+
+            // Establecer "M" por defecto y cargar sus máquinas
+            codigoMaquinaSelect.value = 'M';
+            codigoMaquinaSelect.dispatchEvent(new Event('change'));
+        });
+    </script>
+}

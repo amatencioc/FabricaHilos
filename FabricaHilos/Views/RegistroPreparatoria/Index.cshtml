@@ -1,0 +1,139 @@
+@model IEnumerable<FabricaHilos.Services.Produccion.PreparatoriaListDto>
+@using FabricaHilos.Helpers
+
+@{
+    ViewData["Title"] = "Registro de Preparatoria";
+}
+
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-controller="Produccion" asp-action="Index">Producción</a></li>
+    <li class="breadcrumb-item active">Registro de Preparatoria</li>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="section-title mb-0"><i class="bi bi-gear-wide-connected me-2"></i>Registro de Preparatoria</h4>
+    @if (User.IsInRole("Admin") || User.IsInRole("Gerencia") || User.IsInRole("Supervisor"))
+    {
+        <a asp-action="Crear" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Nueva Preparatoria
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex gap-2 flex-wrap">
+            <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control form-control-sm" placeholder="Buscar por lote..." style="max-width: 280px;" />
+            <select name="maquina" class="form-select form-select-sm" style="max-width: 280px;">
+                <option value="">Todas las máquinas</option>
+                @if (ViewBag.Maquinas != null)
+                {
+                    @foreach (var maq in ViewBag.Maquinas)
+                    {
+                        <option value="@maq.Codigo" selected="@(ViewBag.MaquinaFiltro == maq.Codigo)">@maq.Descripcion</option>
+                    }
+                }
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i> Filtrar</button>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-corporate table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Receta</th>
+                        <th>Lote</th>
+                        <th>Material</th>
+                        <th>Máquina</th>
+                        <th>Título</th>
+                        <th>Fecha Ini</th>
+                        <th>Turno</th>
+                        <th>Operario</th>
+                        <th>Paso</th>
+                        <th>Estado</th>
+                        @if (User.IsInRole("Admin") || User.IsInRole("Gerencia") || User.IsInRole("Supervisor"))
+                        {
+                            <th>Acciones</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @* Datos de la base de datos *@
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@item.Receta</td>
+                                <td>@(item.Lote ?? "-")</td>
+                                <td>@(item.Material ?? "-")</td>
+                                <td>@(string.IsNullOrEmpty(item.DescripcionMaquina) ? "-" : item.DescripcionMaquina)</td>
+                                <td>@(string.IsNullOrEmpty(item.DescripcionTitulo) ? "-" : item.DescripcionTitulo)</td>
+                                <td>@item.FechaInicio.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@(item.Turno == null ? "-" : ProduccionLookups.GetTurno(item.Turno))</td>
+                                <td>@(string.IsNullOrEmpty(item.NombreOperario) ? "-" : item.NombreOperario)</td>
+                                <td>@(item.PasoManual == null ? "-" : ProduccionLookups.GetPaso(item.PasoManual))</td>
+                                <td>
+                                    @{
+                                        var estadoClass = item.Estado switch
+                                        {
+                                            "1" => new { Class = "bg-primary", Icon = "bi-gear-fill", Text = "En Proceso" },
+                                            "3" => new { Class = "bg-success", Icon = "bi-check-circle", Text = "Completado" },
+                                            "9" => new { Class = "bg-danger", Icon = "bi-x-circle", Text = "Anulado" },
+                                            _ => new { Class = "bg-secondary", Icon = "bi-question-circle", Text = "Desconocido" }
+                                        };
+                                    }
+                                    <span class="badge @estadoClass.Class">
+                                        <i class="bi @estadoClass.Icon me-1"></i>@estadoClass.Text
+                                    </span>
+                                </td>
+                                @if (User.IsInRole("Admin") || User.IsInRole("Gerencia") || User.IsInRole("Supervisor"))
+                                {
+                                    <td>
+                                        @if (item.LocalId.HasValue)
+                                        {
+                                            <a asp-action="Editar" asp-route-id="@item.LocalId" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a asp-action="DetalleProduccion" asp-route-id="@item.LocalId" class="btn btn-sm btn-outline-info me-1" title="Detalle de Producción">
+                                                <i class="bi bi-bar-chart-line"></i>
+                                            </a>
+                                            @if (User.IsInRole("Admin") || User.IsInRole("Gerencia"))
+                                            {
+                                                <form asp-action="Anular" asp-route-id="@item.LocalId" method="post" class="d-inline"
+                                                      onsubmit="return confirm('¿Anular esta preparatoria?');">  
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Anular Preparatoria">
+                                                        <i class="bi bi-slash-circle"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Oracle</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="11" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay registros de preparatoria.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+

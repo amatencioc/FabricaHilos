@@ -1,0 +1,179 @@
+@model FabricaHilos.Models.Produccion.OrdenProduccion
+
+@{
+    ViewData["Title"] = "Detalle de Producción";
+}
+
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-controller="Produccion" asp-action="Index">Producción</a></li>
+    <li class="breadcrumb-item"><a asp-action="Index">Registro de Preparatoria</a></li>
+    <li class="breadcrumb-item active">Detalle de Producción</li>
+}
+
+<div class="d-flex align-items-center mb-4" style="border-bottom: 3px solid #ffc107; padding-bottom: 10px;">
+    <i class="bi bi-file-earmark-text fs-3 me-3"></i>
+    <h4 class="mb-0 fw-bold">Detalle de Producción</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-5">
+                <form asp-action="DetalleProduccion" method="post">
+                    @Html.AntiForgeryToken()
+                    <input name="id" type="hidden" value="@Model.Id" />
+
+                    <!-- Información de la Orden -->
+                    <div class="row mb-4 pb-3 border-bottom">
+                        <div class="col-md-3">
+                            <strong>Código de Receta:</strong> @(Model.CodigoReceta ?? "-")
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Lote:</strong> @(Model.Lote ?? "-")
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Material:</strong> @Model.DescripcionMaterial
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Fecha Inicial:</strong> @Model.FechaInicio.ToString("dd/MM/yyyy HH:mm:ss")
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Fila 1 -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Velocidad <span class="text-danger">*</span></label>
+                            <input id="velocidadInput" name="velocidad" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese la velocidad" value="@Model.Velocidad" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Metraje <span class="text-danger">*</span></label>
+                            <input id="metrajeInput" name="metraje" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese el metraje" value="@Model.Metraje" required />
+                        </div>
+
+                        <!-- Fila 2 -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Rollo Tacho</label>
+                            <input id="rolloTachoInput" name="rolloTacho" class="form-control" type="number" min="0" placeholder="Ingrese el rollo tacho" value="@Model.RolloTacho" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Kg Neto <span class="text-danger">*</span></label>
+                            <input id="kgNetoInput" name="kgNeto" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese kg neto" value="@Model.KgNeto" required />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save me-2"></i>Guardar
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary px-4">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // ===== CONFIGURACIÓN =====
+        // CodigoMaquina = TP_MAQ de Oracle (ej: 'M' para MANUARES, 'J' para MADEJERA).
+        // Si no existe estrategia definida para el tipo, se usa 'M' como fallback.
+        const tipoMaquina   = '@Model.CodigoMaquina';
+        // Código del TITULO de la fila (ej: "404") → SELECT PESO FROM H_TITULOS WHERE TITULO = :titulo
+        const tituloCodigo  = '@Model.Titulo';
+        const urlPesoTitulo = '@Url.Action("ObtenerPesoTitulo", "RegistroPreparatoria")';
+
+        // ===== CACHÉ del PESO para evitar llamadas repetidas a la API =====
+        let pesoCached = null;
+
+        // Ejecuta: SELECT PESO FROM H_TITULOS WHERE TITULO = tituloCodigo
+        async function fetchPesoTitulo(titulo) {
+            if (pesoCached !== null) return pesoCached;
+            try {
+                const response = await fetch(`${urlPesoTitulo}?titulo=${encodeURIComponent(titulo)}`);
+                const result = await response.json();
+                pesoCached = result.success ? parseFloat(result.peso) : 0;
+            } catch {
+                pesoCached = 0;
+            }
+            return pesoCached;
+        }
+
+        // ===== ESTRATEGIAS DE CÁLCULO POR TIPO DE MÁQUINA =====
+        // Para agregar un nuevo tipo, agregar una entrada al objeto con la clave = código del tipo.
+        const calculationStrategies = {
+            'M': async function(metraje, rolloTacho) {
+                // V_PESO_N = SELECT PESO FROM H_TITULOS WHERE TITULO = tituloCodigo
+                const vPesoN = await fetchPesoTitulo(tituloCodigo);
+                // KG_NETO = METRAJE * ROLLO_TACHO * V_PESO_N  → redondeado 2 decimales
+                return Math.round(metraje * rolloTacho * vPesoN * 100) / 100;
+            }
+            // Ejemplo para agregar otro tipo:
+            // 'X': async function(metraje, rolloTacho) {
+            //     const vPesoN = await fetchPesoTitulo(tituloCodigo);
+            //     return Math.round(metraje * rolloTacho * vPesoN * 100) / 100;
+            // }
+        };
+
+        // ===== ESTADO DEL CAMPO Kg Neto =====
+        function setKgNetoReadOnly(isAuto) {
+            const input = document.getElementById('kgNetoInput');
+            input.readOnly = isAuto;
+            input.style.backgroundColor = isAuto ? '#f8f9fa' : '';
+        }
+
+        // ===== CÁLCULO EN TIEMPO REAL =====
+        async function recalcularKgNeto() {
+            const rolloTachoInput = document.getElementById('rolloTachoInput');
+            const metrajeInput   = document.getElementById('metrajeInput');
+            const kgNetoInput    = document.getElementById('kgNetoInput');
+
+            const rolloTachoVal = rolloTachoInput.value.trim();
+            const rolloTacho    = parseFloat(rolloTachoVal);
+            const metraje       = parseFloat(metrajeInput.value);
+
+            // Si RolloTacho está completamente vacío → limpiar Kg Neto (activar validación required)
+            if (!rolloTachoVal) {
+                setKgNetoReadOnly(false);
+                kgNetoInput.value = '';
+                return;
+            }
+
+            // Si RolloTacho es 0 o inválido → Kg Neto es manual (no limpiar)
+            if (isNaN(rolloTacho) || rolloTacho <= 0) {
+                setKgNetoReadOnly(false);
+                return;
+            }
+
+            // Buscar estrategia por tipo de máquina; si no existe, usar 'M' como fallback
+            const strategy = calculationStrategies[tipoMaquina] ?? calculationStrategies['M'];
+            if (!strategy) {
+                setKgNetoReadOnly(false);
+                return;
+            }
+
+            // Bloquear Kg Neto y calcular
+            setKgNetoReadOnly(true);
+            if (!isNaN(metraje) && metraje > 0) {
+                const resultado = await strategy(metraje, rolloTacho);
+                kgNetoInput.value = resultado;
+            }
+        }
+
+        // ===== INICIALIZACIÓN =====
+        document.addEventListener('DOMContentLoaded', function () {
+            // Establecer estado inicial sin sobreescribir el valor guardado
+            const rolloTachoVal = document.getElementById('rolloTachoInput').value.trim();
+            const rolloTacho    = parseFloat(rolloTachoVal);
+            const tieneEstrategia = !!(calculationStrategies[tipoMaquina] ?? calculationStrategies['M']);
+            setKgNetoReadOnly(tieneEstrategia && !!rolloTachoVal && !isNaN(rolloTacho) && rolloTacho > 0);
+
+            // Eventos de cambio en tiempo real (input: teclado; change: flechas del spinner)
+            ['input', 'change'].forEach(function(evt) {
+                document.getElementById('metrajeInput').addEventListener(evt, recalcularKgNeto);
+                document.getElementById('rolloTachoInput').addEventListener(evt, recalcularKgNeto);
+            });
+        });
+    </script>
+}
