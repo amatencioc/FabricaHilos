@@ -1,0 +1,193 @@
+@{
+    ViewData["Title"] = "Consultas Oracle – Registro de Preparatoria";
+}
+
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-controller="Produccion" asp-action="Index">Producción</a></li>
+    <li class="breadcrumb-item"><a asp-action="Index">Registro de Preparatoria</a></li>
+    <li class="breadcrumb-item active">Consultas Oracle</li>
+}
+
+<div class="d-flex align-items-center mb-4" style="border-bottom: 3px solid #0d6efd; padding-bottom: 10px;">
+    <i class="bi bi-database fs-3 me-3 text-primary"></i>
+    <h4 class="mb-0 fw-bold">Consultas Oracle – Registro de Preparatoria</h4>
+</div>
+
+<p class="text-muted mb-4">
+    A continuación se muestran las consultas SQL ejecutadas sobre la tabla <strong>H_RPRODUC</strong> de Oracle
+    para las operaciones del módulo de Registro de Preparatoria.
+</p>
+
+<!-- INSERT -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white d-flex align-items-center">
+        <i class="bi bi-plus-circle-fill me-2"></i>
+        <strong>INSERT – Registrar nueva preparatoria</strong>
+        <span class="ms-auto badge bg-light text-success">Crear</span>
+    </div>
+    <div class="card-body p-0">
+        <pre class="mb-0 p-3" style="background:#1e1e1e; color:#d4d4d4; font-size:.85rem; border-radius:0 0 .375rem .375rem; overflow-x:auto;"><code>INSERT INTO H_RPRODUC (
+    RECETA,
+    LOTE,
+    TP_MAQ,
+    COD_MAQ,
+    TITULO,
+    FECHA_INI,
+    ESTADO,
+    C_CODIGO,
+    TURNO,
+    PASO_MANUAR,
+    HUSOS_INAC,
+    FECHA_TURNO
+) VALUES (
+    :receta,
+    :lote,
+    :tp_maq,
+    :cod_maq,
+    :titulo,
+    :fecha_ini,
+    :estado,       -- valor fijo: '1' (En Proceso)
+    :c_codigo,
+    :turno,
+    :paso_manuar,
+    :husos_inac,   -- valor fijo: 0
+    :fecha_turno   -- fecha actual dd/MM/yyyy
+)</code></pre>
+    </div>
+</div>
+
+<!-- SELECT -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white d-flex align-items-center">
+        <i class="bi bi-search me-2"></i>
+        <strong>SELECT – Listar preparatorias activas</strong>
+        <span class="ms-auto badge bg-light text-primary">Índice</span>
+    </div>
+    <div class="card-body p-0">
+        <pre class="mb-0 p-3" style="background:#1e1e1e; color:#d4d4d4; font-size:.85rem; border-radius:0 0 .375rem .375rem; overflow-x:auto;"><code>SELECT
+    R.RECETA,
+    R.LOTE,
+    R.TP_MAQ,
+    R.COD_MAQ,
+    R.TITULO,
+    R.FECHA_INI,
+    R.ESTADO,
+    R.C_CODIGO,
+    R.TURNO,
+    R.PASO_MANUAR,
+    M.DESC_MAQ,
+    T.DESCRIPCION  AS DESC_TITULO,
+    P.NOMBRE_CORTO AS NOMBRE_OPERARIO,
+    CASE
+        WHEN R.RECETA IS NOT NULL THEN
+            (SELECT F2.ABREVIADO||' '||P2.ABREVIADO||' '||V2.ABREVIADO||' ('||I2.COLOR_DET||')'
+             FROM H_RECETA_G G2, H_FIBRA F2, H_PROCESOS P2, ITEMPED I2, V_TFIBRA T2, V_VALPF V2, CLIENTES C2
+             WHERE TO_CHAR(G2.NUMERO) = TRIM(TO_CHAR(R.RECETA))
+               AND G2.TIPO = 'R'
+               AND NVL(G2.ESTADO,'1') &lt;&gt; '9'
+               AND F2.FIBRA = G2.FIBRA
+               AND P2.PROCESO = G2.PROCESO
+               AND I2.NUM_PED = G2.NUM_PED
+               AND I2.NRO = G2.ITEM_PED
+               AND T2.FIBRA = I2.TFIBRA
+               AND V2.TIPO = T2.INDPF
+               AND V2.CODIGO = I2.VALPF
+               AND ROWNUM = 1)
+        ELSE
+            (SELECT F3.ABREVIADO||' '||PR3.ABREVIADO||' '||V3.ABREVIADO
+             FROM H_RUTA_LOTE_G RL3, H_FIBRA F3, H_PROCESOS PR3, V_VALPF V3
+             WHERE RL3.LOTE = R.LOTE
+               AND RL3.ESTADO = '0'
+               AND F3.FIBRA = RL3.FIBRA
+               AND PR3.PROCESO = RL3.PROCESO
+               AND V3.TIPO = F3.INDPF
+               AND V3.CODIGO = RL3.VALPF
+               AND ROWNUM = 1)
+    END AS MATERIAL
+FROM H_RPRODUC R
+LEFT JOIN V_MAQUINA  M ON M.COD_MAQ = R.COD_MAQ AND M.AREA = '01'
+LEFT JOIN H_TITULOS  T ON T.TITULO  = R.TITULO
+LEFT JOIN V_PERSONAL P ON P.C_CODIGO = R.C_CODIGO
+WHERE R.ESTADO = '1'
+  -- filtros opcionales:
+  AND R.LOTE    LIKE :filtroLote    || '%'   -- si se filtra por lote
+  AND R.COD_MAQ LIKE :filtroMaquina || '%'   -- si se filtra por máquina
+ORDER BY R.FECHA_INI DESC</code></pre>
+    </div>
+</div>
+
+<!-- UPDATE EDITAR -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning text-dark d-flex align-items-center">
+        <i class="bi bi-pencil-fill me-2"></i>
+        <strong>UPDATE – Actualizar preparatoria</strong>
+        <span class="ms-auto badge bg-dark text-warning">Editar</span>
+    </div>
+    <div class="card-body p-0">
+        <pre class="mb-0 p-3" style="background:#1e1e1e; color:#d4d4d4; font-size:.85rem; border-radius:0 0 .375rem .375rem; overflow-x:auto;"><code>UPDATE H_RPRODUC
+SET
+    RECETA      = :newReceta,
+    LOTE        = :newLote,
+    TP_MAQ      = :newTpMaq,
+    COD_MAQ     = :newCodMaq,
+    TITULO      = :newTitulo,
+    C_CODIGO    = :cCodigo,
+    TURNO       = :turno,
+    PASO_MANUAR = :pasoManuar
+WHERE NVL(TO_CHAR(RECETA), ' ')                    = NVL(:oldReceta, ' ')
+  AND LOTE                                          = :oldLote
+  AND TP_MAQ                                        = :oldTpMaq
+  AND COD_MAQ                                       = :oldCodMaq
+  AND TITULO                                        = :oldTitulo
+  AND TO_CHAR(FECHA_INI, 'YYYY-MM-DD HH24:MI:SS') = :fechaIni
+  AND ESTADO  = '1'</code></pre>
+    </div>
+</div>
+
+<!-- UPDATE CERRAR -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white d-flex align-items-center">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>UPDATE – Cerrar preparatoria</strong>
+        <span class="ms-auto badge bg-light text-success">Cerrar · ESTADO → '3'</span>
+    </div>
+    <div class="card-body p-0">
+        <pre class="mb-0 p-3" style="background:#1e1e1e; color:#d4d4d4; font-size:.85rem; border-radius:0 0 .375rem .375rem; overflow-x:auto;"><code>UPDATE H_RPRODUC
+SET ESTADO    = '3',
+    FECHA_FIN = :fechaFin
+WHERE NVL(TO_CHAR(RECETA), ' ')                    = NVL(:receta, ' ')
+  AND LOTE                                          = :lote
+  AND TP_MAQ                                        = :tpMaq
+  AND COD_MAQ                                       = :codMaq
+  AND TITULO                                        = :titulo
+  AND TO_CHAR(FECHA_INI, 'YYYY-MM-DD HH24:MI:SS') = :fechaIni
+  AND ESTADO = '1'</code></pre>
+    </div>
+</div>
+
+<!-- UPDATE ANULAR -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-danger text-white d-flex align-items-center">
+        <i class="bi bi-slash-circle-fill me-2"></i>
+        <strong>UPDATE – Anular preparatoria</strong>
+        <span class="ms-auto badge bg-light text-danger">Anular · ESTADO → '9'</span>
+    </div>
+    <div class="card-body p-0">
+        <pre class="mb-0 p-3" style="background:#1e1e1e; color:#d4d4d4; font-size:.85rem; border-radius:0 0 .375rem .375rem; overflow-x:auto;"><code>UPDATE H_RPRODUC
+SET ESTADO    = '9',
+    FECHA_FIN = :fechaFin
+WHERE NVL(TO_CHAR(RECETA), ' ')                    = NVL(:receta, ' ')
+  AND LOTE                                          = :lote
+  AND TP_MAQ                                        = :tpMaq
+  AND COD_MAQ                                       = :codMaq
+  AND TITULO                                        = :titulo
+  AND TO_CHAR(FECHA_INI, 'YYYY-MM-DD HH24:MI:SS') = :fechaIni
+  AND ESTADO = '1'</code></pre>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+</div>
