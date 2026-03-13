@@ -385,6 +385,13 @@ namespace FabricaHilos.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Admin,Gerencia,Supervisor")]
+        public IActionResult ConsultaOracle()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Gerencia,Supervisor")]
         public async Task<IActionResult> DetalleProduccion(int id)
         {
             var orden = await _context.OrdenesProduccion
