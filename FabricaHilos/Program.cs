@@ -37,8 +37,13 @@ builder.Services.ConfigureApplicationCookie(options =>
 // Registrar servicio de búsqueda de recetas (Oracle)
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 
-// Agregar MVC con vistas
-builder.Services.AddControllersWithViews();
+// Agregar MVC con vistas y registrar ubicación de vistas anidadas bajo Produccion
+builder.Services.AddControllersWithViews()
+    .AddRazorOptions(options =>
+    {
+        // Permite que Views/Produccion/{Controller}/{Action}.cshtml sea encontrado automáticamente
+        options.ViewLocationFormats.Add("/Views/Produccion/{1}/{0}.cshtml");
+    });
 
 var app = builder.Build();
 
