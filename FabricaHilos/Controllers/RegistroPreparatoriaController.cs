@@ -24,10 +24,10 @@ namespace FabricaHilos.Controllers
             _logger = logger;
         }
 
-        public async Task<IActionResult> Index(string? buscar, string? maquina)
+        public async Task<IActionResult> Index(string? buscar, string? maquina, string? tipoMaquina)
         {
             // Obtener preparatorias desde Oracle con estado = '1'
-            var preparatorias = await _recetaService.ObtenerPreparatoriasAsync(buscar, maquina);
+            var preparatorias = await _recetaService.ObtenerPreparatoriasAsync(buscar, maquina, tipoMaquina);
 
             // Cruzar con registros locales para obtener el Id de SQLite (para acciones de edición).
             // Receta es opcional: si existe se cruza por CodigoReceta + FechaInicio (segundos);
@@ -103,7 +103,9 @@ namespace FabricaHilos.Controllers
             }
 
             ViewBag.Buscar = buscar;
+            ViewBag.TipoMaquinaFiltro = tipoMaquina;
             ViewBag.MaquinaFiltro = maquina;
+            ViewBag.TiposMaquinasFiltro = await _recetaService.ObtenerTiposMaquinasAsync();
 
             // Obtener lista de máquinas únicas desde Oracle para el combo (código + descripción)
             var maquinasUnicas = preparatorias
@@ -231,13 +233,14 @@ namespace FabricaHilos.Controllers
                 }
 
                 // Guardar valores originales ANTES de modificar (se usan en el WHERE del Oracle UPDATE)
-                var oldReceta    = orden.CodigoReceta;
-                var oldLote      = orden.Lote;
-                var oldTpMaq     = orden.CodigoMaquina;
-                var oldCodMaq    = orden.Maquina;
-                var oldTitulo    = orden.Titulo;
+                var oldReceta       = orden.CodigoReceta;
+                var oldLote         = orden.Lote;
+                var oldTpMaq        = orden.CodigoMaquina;
+                var oldCodMaq       = orden.Maquina;
+                var oldTitulo       = orden.Titulo;
+                var oldFechaInicio  = orden.FechaInicio;
 
-                // Actualizar solo los campos editables. Estado, Cerrado y FechaInicio no se modifican.
+                // Actualizar los campos editables, incluida la Fecha de Inicio.
                 orden.CodigoReceta        = model.CodigoReceta;
                 orden.Lote                = model.Lote;
                 orden.DescripcionMaterial = model.DescripcionMaterial;
@@ -247,25 +250,21 @@ namespace FabricaHilos.Controllers
                 orden.EmpleadoId          = model.EmpleadoId;
                 orden.Turno               = model.Turno;
                 orden.PasoManuar          = model.PasoManuar;
+                orden.FechaInicio         = model.FechaInicio;
 
                 await _context.SaveChangesAsync();
 
-                // UPDATE en Oracle (H_RPRODUC). FECHA_INI y ESTADO no se modifican.
+                // UPDATE en Oracle (H_RPRODUC). Se actualiza también FECHA_INI con la nueva fecha.
                 var actualizadoEnOracle = await _recetaService.ActualizarPreparatoriaOracleAsync(
-                    oldReceta, oldLote, oldTpMaq, oldCodMaq, oldTitulo, orden.FechaInicio,
+                    oldReceta, oldLote, oldTpMaq, oldCodMaq, oldTitulo, oldFechaInicio,
                     orden.CodigoReceta, orden.Lote, orden.CodigoMaquina, orden.Maquina, orden.Titulo,
-                    orden.EmpleadoId, orden.Turno, orden.PasoManuar);
+                    orden.EmpleadoId, orden.Turno, orden.PasoManuar, orden.FechaInicio);
 
+                TempData["Success"] = "Preparatoria actualizada correctamente.";
                 if (actualizadoEnOracle)
-                {
-                    TempData["Success"] = "Preparatoria actualizada exitosamente en Oracle y sistema local.";
                     _logger.LogInformation("Preparatoria {Id} actualizada en Oracle y SQLite.", id);
-                }
                 else
-                {
-                    TempData["Warning"] = "Preparatoria actualizada localmente, pero no se pudo actualizar en Oracle.";
                     _logger.LogWarning("Preparatoria {Id} actualizada en SQLite pero falló en Oracle.", id);
-                }
 
                 return RedirectToAction(nameof(Index));
             }

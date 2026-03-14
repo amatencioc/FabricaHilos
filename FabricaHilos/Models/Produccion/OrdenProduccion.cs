@@ -23,7 +23,7 @@ namespace FabricaHilos.Models.Produccion
 
         [Required(ErrorMessage = "La fecha de inicio es obligatoria.")]
         [Display(Name = "Fecha de Inicio")]
-        [DataType(DataType.Date)]
+        [DataType(DataType.DateTime)]
         public DateTime FechaInicio { get; set; }
 
         [Column("TipoHilo")]

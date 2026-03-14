@@ -29,21 +29,21 @@ namespace FabricaHilos.Services.Produccion
     {
         public string CodigoMaquina { get; set; } = string.Empty;
         public string DescripcionMaquina { get; set; } = string.Empty;
-        public string TextoCompleto => $"{CodigoMaquina} - {DescripcionMaquina}";
+        public string TextoCompleto => DescripcionMaquina;
     }
 
     public class TituloDto
     {
         public string Titulo { get; set; } = string.Empty;
         public string Descripcion { get; set; } = string.Empty;
-        public string TextoCompleto => $"{Titulo} - {Descripcion}";
+        public string TextoCompleto => Descripcion;
     }
 
     public class EmpleadoOracleDto
     {
         public string Codigo { get; set; } = string.Empty;
         public string NombreCorto { get; set; } = string.Empty;
-        public string TextoCompleto => $"{Codigo} - {NombreCorto}";
+        public string TextoCompleto => NombreCorto;
     }
 
     public class PreparatoriaListDto
@@ -82,13 +82,13 @@ namespace FabricaHilos.Services.Produccion
         Task<List<EmpleadoOracleDto>> ObtenerEmpleadosAsync();
         Task<bool> InsertarPreparatoriaAsync(OrdenProduccion orden);
         Task<decimal> ObtenerPesoTituloAsync(string titulo);
-        Task<List<PreparatoriaListDto>> ObtenerPreparatoriasAsync(string? filtroLote = null, string? filtroMaquina = null);
+        Task<List<PreparatoriaListDto>> ObtenerPreparatoriasAsync(string? filtroLote = null, string? filtroMaquina = null, string? filtroTipoMaquina = null);
         Task<bool> CerrarPreparatoriaOracleAsync(string? receta, string? lote, string? tpMaq, string? codMaq, string? titulo, DateTime fechaIni);
         Task<bool> AnularPreparatoriaOracleAsync(string? receta, string? lote, string? tpMaq, string? codMaq, string? titulo, DateTime fechaIni);
         Task<bool> ActualizarPreparatoriaOracleAsync(
             string? oldReceta, string? oldLote, string? oldTpMaq, string? oldCodMaq, string? oldTitulo, DateTime fechaIni,
             string? newReceta, string? newLote, string? newTpMaq, string? newCodMaq, string? newTitulo,
-            string? cCodigo, string? turno, string? pasoManuar);
+            string? cCodigo, string? turno, string? pasoManuar, DateTime newFechaIni);
         Task<GuardarCerrarResultado> GuardarYCerrarDetalleProduccionAsync(
             string? receta, string? lote, string? tpMaq, string? codMaq, string? titulo, DateTime fechaIni,
             decimal? velocidad, decimal? metraje, int? rolloTacho, decimal? kgNeto);
@@ -637,7 +637,7 @@ namespace FabricaHilos.Services.Produccion
             }
         }
 
-        public async Task<List<PreparatoriaListDto>> ObtenerPreparatoriasAsync(string? filtroLote = null, string? filtroMaquina = null)
+        public async Task<List<PreparatoriaListDto>> ObtenerPreparatoriasAsync(string? filtroLote = null, string? filtroMaquina = null, string? filtroTipoMaquina = null)
         {
             var connectionString = _configuration.GetConnectionString("OracleConnection");
 
@@ -701,6 +701,10 @@ namespace FabricaHilos.Services.Produccion
             {
                 query += " AND R.LOTE LIKE :filtroLote || '%'";
             }
+            if (!string.IsNullOrEmpty(filtroTipoMaquina))
+            {
+                query += " AND R.TP_MAQ = :filtroTipoMaquina";
+            }
             if (!string.IsNullOrEmpty(filtroMaquina))
             {
                 query += " AND R.COD_MAQ LIKE :filtroMaquina || '%'";
@@ -721,6 +725,10 @@ namespace FabricaHilos.Services.Produccion
                 if (!string.IsNullOrEmpty(filtroLote))
                 {
                     command.Parameters.Add(new OracleParameter(":filtroLote", OracleDbType.Varchar2, filtroLote, ParameterDirection.Input));
+                }
+                if (!string.IsNullOrEmpty(filtroTipoMaquina))
+                {
+                    command.Parameters.Add(new OracleParameter(":filtroTipoMaquina", OracleDbType.Varchar2, filtroTipoMaquina, ParameterDirection.Input));
                 }
                 if (!string.IsNullOrEmpty(filtroMaquina))
                 {
@@ -891,7 +899,7 @@ namespace FabricaHilos.Services.Produccion
         public async Task<bool> ActualizarPreparatoriaOracleAsync(
             string? oldReceta, string? oldLote, string? oldTpMaq, string? oldCodMaq, string? oldTitulo, DateTime fechaIni,
             string? newReceta, string? newLote, string? newTpMaq, string? newCodMaq, string? newTitulo,
-            string? cCodigo, string? turno, string? pasoManuar)
+            string? cCodigo, string? turno, string? pasoManuar, DateTime newFechaIni)
         {
             var connectionString = _configuration.GetConnectionString("OracleConnection");
 
@@ -905,7 +913,7 @@ namespace FabricaHilos.Services.Produccion
                 "Actualizando preparatoria en Oracle. WHERE: Receta={OldReceta}, Lote={OldLote}, TpMaq={OldTpMaq}, CodMaq={OldCodMaq}, Titulo={OldTitulo}, FechaIni={FechaIni}",
                 oldReceta, oldLote, oldTpMaq, oldCodMaq, oldTitulo, fechaIni);
 
-            // SET: campos editables. FECHA_INI y ESTADO no se modifican.
+            // SET: campos editables incluyendo FECHA_INI.
             // WHERE: usa TO_CHAR a segundos — FECHA_INI fue insertada con DateTime.Now de la app
             // (no SYSDATE), así ambos valores son idénticos.
             const string query = @"
@@ -918,7 +926,8 @@ namespace FabricaHilos.Services.Produccion
                     TITULO      = :newTitulo,
                     C_CODIGO    = :cCodigo,
                     TURNO       = :turno,
-                    PASO_MANUAR = :pasoManuar
+                    PASO_MANUAR = :pasoManuar,
+                    FECHA_INI   = TO_DATE(:newFechaIni, 'YYYY-MM-DD HH24:MI:SS')
                 WHERE NVL(TO_CHAR(RECETA), ' ')                    = NVL(:oldReceta, ' ')
                   AND LOTE                                          = :oldLote
                   AND TP_MAQ                                        = :oldTpMaq
@@ -945,6 +954,7 @@ namespace FabricaHilos.Services.Produccion
                 command.Parameters.Add(new OracleParameter(":cCodigo",     OracleDbType.Varchar2) { Value = Str(cCodigo) });
                 command.Parameters.Add(new OracleParameter(":turno",       OracleDbType.Varchar2) { Value = Str(turno) });
                 command.Parameters.Add(new OracleParameter(":pasoManuar",  OracleDbType.Varchar2) { Value = Str(pasoManuar) });
+                command.Parameters.Add(new OracleParameter(":newFechaIni", OracleDbType.Varchar2) { Value = newFechaIni.ToString("yyyy-MM-dd HH:mm:ss") });
                 // WHERE
                 command.Parameters.Add(new OracleParameter(":oldReceta",   OracleDbType.Varchar2) { Value = Str(oldReceta) });
                 command.Parameters.Add(new OracleParameter(":oldLote",     OracleDbType.Varchar2) { Value = Str(oldLote) });

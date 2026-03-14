@@ -147,13 +147,8 @@ header {
     margin-bottom: 1.5rem;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    #sidebar {
-        width: 0;
-        overflow: hidden;
-    }
-    #sidebar.show {
-        width: var(--color-sidebar-ancho);
-    }
+/* Sidebar colapsado - funciona en cualquier tamaño de pantalla */
+#sidebar.sidebar-collapsed {
+    width: 0;
+    overflow: hidden;
 }
