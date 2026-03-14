@@ -91,11 +91,26 @@ namespace FabricaHilos.Models.Produccion
         public decimal? KgNeto { get; set; }
 
         [Display(Name = "Produc Teorico")]
-        [Range(0, double.MaxValue)]
-        public decimal? ProducTeorico { get; set; }
+            [Range(0, double.MaxValue)]
+            public decimal? ProducTeorico { get; set; }
 
-        [Display(Name = "Eficienc Teorico")]
-        [Range(0, 100)]
-        public decimal? EficiencTeorico { get; set; }
-    }
+            [Display(Name = "Eficienc Teorico")]
+            [Range(0, 100)]
+            public decimal? EficiencTeorico { get; set; }
+
+            // Campos Pabileras
+            [Display(Name = "Contador Inicial")]
+            [Range(0, double.MaxValue)]
+            public decimal? ContadorInicial { get; set; }
+
+            [Display(Name = "Horas Inactivas (HI)")]
+            [Range(0, double.MaxValue)]
+            public decimal? HorasInactivas { get; set; }
+
+            [Display(Name = "Contador Final")]
+            [Range(0, double.MaxValue)]
+            public decimal? ContadorFinal { get; set; }
+
+            public ICollection<ParadaProduccion> Paradas { get; set; } = new List<ParadaProduccion>();
+        }
 }

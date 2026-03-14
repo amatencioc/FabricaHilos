@@ -18,6 +18,7 @@ namespace FabricaHilos.Data
         public DbSet<MateriaPrima> MateriasPrimas { get; set; }
         public DbSet<ProductoTerminado> ProductosTerminados { get; set; }
         public DbSet<OrdenProduccion> OrdenesProduccion { get; set; }
+        public DbSet<ParadaProduccion> ParadasProduccion { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<Empleado> Empleados { get; set; }
@@ -49,6 +50,17 @@ namespace FabricaHilos.Data
             builder.Entity<OrdenProduccion>(entity =>
             {
                 entity.HasKey(e => e.Id);
+            });
+
+            // Configuración de ParadaProduccion
+            builder.Entity<ParadaProduccion>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Metraje).HasColumnType("decimal(18,2)");
+                entity.HasOne(e => e.OrdenProduccion)
+                      .WithMany(o => o.Paradas)
+                      .HasForeignKey(e => e.OrdenProduccionId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configuración de Cliente

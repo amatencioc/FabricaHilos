@@ -59,7 +59,7 @@
                         <!-- Fila 3: Tipo de Máquina y Máquina -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tipo de Máquina <span class="text-danger">*</span></label>
-                            <select asp-for="CodigoMaquina" id="codigoMaquinaSelect" class="form-select" disabled style="background-color: #f8f9fa;">
+                            <select asp-for="CodigoMaquina" id="codigoMaquinaSelect" class="form-select">
                                 <option value="">Seleccione tipo de máquina</option>
                                 @if (ViewBag.TiposMaquinas != null)
                                 {
@@ -69,7 +69,6 @@
                                     }
                                 }
                             </select>
-                            <input type="hidden" name="CodigoMaquina" value="M" />
                             <span asp-validation-for="CodigoMaquina" class="text-danger small"></span>
                         </div>
                         <div class="col-md-6">
@@ -134,6 +133,18 @@
                                 <option value="POST">POST</option>
                             </select>
                             <span asp-validation-for="PasoManuar" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Fila 6: Contador Inicial y Horas Inactivas (Pabileras) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contador Inicial</label>
+                            <input asp-for="ContadorInicial" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese el contador inicial" />
+                            <span asp-validation-for="ContadorInicial" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Horas Inactivas (HI)</label>
+                            <input asp-for="HorasInactivas" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese las horas inactivas" />
+                            <span asp-validation-for="HorasInactivas" class="text-danger small"></span>
                         </div>
                     </div>
 

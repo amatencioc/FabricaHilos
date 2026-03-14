@@ -59,6 +59,12 @@
                             <label class="form-label fw-semibold">Kg Neto <span class="text-danger">*</span></label>
                             <input id="kgNetoInput" name="kgNeto" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese kg neto" value="@Model.KgNeto" required />
                         </div>
+
+                        <!-- Fila 3: Contador Final (Pabileras) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contador Final</label>
+                            <input name="contadorFinal" class="form-control" type="number" step="0.01" min="0" placeholder="Ingrese el contador final" value="@Model.ContadorFinal" />
+                        </div>
                     </div>
 
                     <div class="mt-4 d-flex gap-2">

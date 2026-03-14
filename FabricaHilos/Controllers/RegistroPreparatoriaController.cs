@@ -401,7 +401,7 @@ namespace FabricaHilos.Controllers
         [HttpPost]
         [Authorize(Roles = "Admin,Gerencia,Supervisor")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DetalleProduccion(int id, decimal? velocidad, decimal? metraje, int? rolloTacho, decimal? kgNeto)
+        public async Task<IActionResult> DetalleProduccion(int id, decimal? velocidad, decimal? metraje, int? rolloTacho, decimal? kgNeto, decimal? contadorFinal)
         {
             var orden = await _context.OrdenesProduccion.FindAsync(id);
             if (orden == null)
@@ -421,6 +421,7 @@ namespace FabricaHilos.Controllers
             orden.Metraje   = metraje;
             orden.RolloTacho = rolloTacho;
             orden.KgNeto    = kgNeto;
+            orden.ContadorFinal = contadorFinal;
             orden.Cerrado   = true;
             orden.Estado    = EstadoOrden.Completada;
 
@@ -595,6 +596,62 @@ namespace FabricaHilos.Controllers
             {
                 _logger.LogError(ex, "Error en API ObtenerPesoTitulo: {Titulo}", titulo);
                 return Json(new { success = false, peso = 0m });
+            }
+        }
+
+        /// <summary>
+        /// API para obtener las paradas registradas de una preparatoria
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin,Gerencia,Supervisor")]
+        public async Task<IActionResult> ObtenerParadas(int id)
+        {
+            var paradas = await _context.ParadasProduccion
+                .Where(p => p.OrdenProduccionId == id)
+                .OrderBy(p => p.NumeroParada)
+                .Select(p => new { p.Id, p.NumeroParada, p.Metraje })
+                .ToListAsync();
+
+            return Json(new { success = true, data = paradas });
+        }
+
+        /// <summary>
+        /// API para guardar (reemplazar) las paradas de una preparatoria
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Admin,Gerencia,Supervisor")]
+        public async Task<IActionResult> GuardarParadas(int id, [FromBody] List<FabricaHilos.Models.Produccion.ParadaDto> paradas)
+        {
+            try
+            {
+                var orden = await _context.OrdenesProduccion.FindAsync(id);
+                if (orden == null)
+                    return Json(new { success = false, message = "Preparatoria no encontrada." });
+
+                var existentes = _context.ParadasProduccion.Where(p => p.OrdenProduccionId == id);
+                _context.ParadasProduccion.RemoveRange(existentes);
+
+                if (paradas != null)
+                {
+                    foreach (var p in paradas)
+                    {
+                        _context.ParadasProduccion.Add(new FabricaHilos.Models.Produccion.ParadaProduccion
+                        {
+                            OrdenProduccionId = id,
+                            NumeroParada = p.NumeroParada,
+                            Metraje = p.Metraje
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Paradas guardadas para preparatoria Id={Id}: {Count} parada(s).", id, paradas?.Count ?? 0);
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al guardar paradas para preparatoria Id={Id}", id);
+                return Json(new { success = false, message = ex.Message });
             }
         }
     }

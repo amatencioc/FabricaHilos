@@ -113,6 +113,11 @@
                                             <a asp-action="DetalleProduccion" asp-route-id="@item.LocalId" class="btn btn-sm btn-outline-info me-1" title="Detalle de Producción">
                                                 <i class="bi bi-bar-chart-line"></i>
                                             </a>
+                                            <button type="button" class="btn btn-sm btn-outline-warning me-1 btn-paradas"
+                                                    data-id="@item.LocalId"
+                                                    title="Agregar Número de Paradas">
+                                                <i class="bi bi-sign-stop"></i> Nº Paradas
+                                            </button>
                                             @if (User.IsInRole("Admin") || User.IsInRole("Gerencia"))
                                             {
                                                 <form asp-action="Anular" asp-route-id="@item.LocalId" method="post" class="d-inline"
@@ -147,4 +152,196 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Nº Paradas -->
+<div class="modal fade" id="modalParadas" tabindex="-1" aria-labelledby="modalParadasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalParadasLabel"><i class="bi bi-sign-stop me-2"></i>Número de Paradas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Nº Parada</label>
+                        <input type="number" id="inputNumeroParada" class="form-control" min="1" placeholder="Número de parada" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Metraje</label>
+                        <input type="number" id="inputMetrajeParada" class="form-control" step="0.01" min="0" placeholder="Metraje" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" id="btnAgregarParada" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle me-1"></i>Agregar
+                        </button>
+                    </div>
+                </div>
+                <div id="alertaParada" class="alert d-none" role="alert"></div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:50%">Nº Parada</th>
+                                <th style="width:40%">Metraje</th>
+                                <th style="width:10%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaParadas">
+                            <tr id="filaVaciaParadas">
+                                <td colspan="3" class="text-center text-muted small py-3">Sin paradas registradas</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnGuardarParadas" class="btn btn-success px-4">
+                    <i class="bi bi-save me-1"></i>Guardar
+                </button>
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const urlObtenerParadas  = '@Url.Action("ObtenerParadas",  "RegistroPreparatoria")';
+    const urlGuardarParadas  = '@Url.Action("GuardarParadas",  "RegistroPreparatoria")';
+
+    let paradaOrdenId = null;
+    let listaParadas  = [];   // { numeroParada, metraje }
+
+    function mostrarAlertaParada(mensaje, tipo) {
+        const el = document.getElementById('alertaParada');
+        el.textContent = mensaje;
+        el.className = `alert alert-${tipo}`;
+    }
+
+    function ocultarAlertaParada() {
+        const el = document.getElementById('alertaParada');
+        el.className = 'alert d-none';
+    }
+
+    function renderizarParadas() {
+        const tbody = document.getElementById('tablaParadas');
+        tbody.innerHTML = '';
+
+        if (listaParadas.length === 0) {
+            tbody.innerHTML = '<tr id="filaVaciaParadas"><td colspan="3" class="text-center text-muted small py-3">Sin paradas registradas</td></tr>';
+            return;
+        }
+
+        listaParadas.forEach(function (p, idx) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.numeroParada}</td>
+                <td>${p.metraje}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-parada" data-idx="${idx}" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('.btn-eliminar-parada').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                listaParadas.splice(parseInt(this.dataset.idx), 1);
+                renderizarParadas();
+                ocultarAlertaParada();
+            });
+        });
+    }
+
+    async function cargarParadas(id) {
+        listaParadas = [];
+        renderizarParadas();
+        try {
+            const resp = await fetch(`${urlObtenerParadas}?id=${id}`);
+            const result = await resp.json();
+            if (result.success && result.data) {
+                listaParadas = result.data.map(function (p) {
+                    return { numeroParada: p.numeroParada, metraje: parseFloat(p.metraje) };
+                });
+                renderizarParadas();
+            }
+        } catch (err) {
+            console.error('Error cargando paradas:', err);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Abrir modal al hacer clic en cualquier botón Nº Paradas
+        document.querySelectorAll('.btn-paradas').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+                paradaOrdenId = parseInt(this.dataset.id);
+                ocultarAlertaParada();
+                document.getElementById('inputNumeroParada').value = '';
+                document.getElementById('inputMetrajeParada').value = '';
+                await cargarParadas(paradaOrdenId);
+                var modal = new bootstrap.Modal(document.getElementById('modalParadas'));
+                modal.show();
+            });
+        });
+
+        // Agregar parada a la lista en memoria
+        document.getElementById('btnAgregarParada').addEventListener('click', function () {
+            const numInput     = document.getElementById('inputNumeroParada');
+            const metrajeInput = document.getElementById('inputMetrajeParada');
+            const numero       = parseInt(numInput.value);
+            const metraje      = parseFloat(metrajeInput.value);
+
+            if (isNaN(numero) || numero <= 0) {
+                mostrarAlertaParada('Ingrese un número de parada válido (mayor a 0).', 'warning');
+                numInput.focus();
+                return;
+            }
+            if (isNaN(metraje) || metraje < 0) {
+                mostrarAlertaParada('Ingrese un metraje válido (mayor o igual a 0).', 'warning');
+                metrajeInput.focus();
+                return;
+            }
+
+            listaParadas.push({ numeroParada: numero, metraje: metraje });
+            renderizarParadas();
+            ocultarAlertaParada();
+            numInput.value     = '';
+            metrajeInput.value = '';
+            numInput.focus();
+        });
+
+        // Guardar paradas en el servidor
+        document.getElementById('btnGuardarParadas').addEventListener('click', async function () {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+            try {
+                const resp = await fetch(`${urlGuardarParadas}?id=${paradaOrdenId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(listaParadas)
+                });
+                const result = await resp.json();
+
+                if (result.success) {
+                    mostrarAlertaParada('Paradas guardadas correctamente.', 'success');
+                } else {
+                    mostrarAlertaParada('Error al guardar: ' + (result.message || 'Error desconocido.'), 'danger');
+                }
+            } catch (err) {
+                mostrarAlertaParada('Error de conexión al guardar las paradas.', 'danger');
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-save me-1"></i>Guardar';
+            }
+        });
+    });
+</script>
+}
 
